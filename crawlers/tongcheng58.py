@@ -38,9 +38,9 @@ class tongcheng58(RealEstate):
         url = self.rental_url % (city)
         wb_datas = self.fetch(url)
         soup = BeautifulSoup(wb_datas, 'lxml')
-        links = soup.select('ul.house-list > li > div.des > h2 > a')
+        items = soup.select('ul.house-list > li > div.des > h2 > a')
         infos = []
-        for i in links:
+        for i in items:
             link = i.get('href')
             if 'e.58.com' in link:
                 continue
@@ -48,6 +48,7 @@ class tongcheng58(RealEstate):
                 link = 'https:' + link
 
             infos.append(self.get_rental_info(link))
+        return infos
 
     def get_rental_info(self, link):
         try:
@@ -91,7 +92,7 @@ class tongcheng58(RealEstate):
             }
 
         except Exception as e:
-            print('数据抓取失败：%s' % str(e))
+            print('数据抓取失败：%s, url:%s' % (str(e), link))
 
     # 二手房信息
     def get_second_hand_infos(self, city):
@@ -105,6 +106,7 @@ class tongcheng58(RealEstate):
             if link[:2] == '//':
                 link = 'https:' + link
             infos.append(self.get_info(link))
+        return infos
 
     def get_second_hand_info(self, link):
         try:
@@ -166,6 +168,3 @@ class tongcheng58(RealEstate):
             ret_str_show += str(num)
         return ret_str_show
 
-# f = tongcheng58()
-# infos = f.get_rental_infos('sz')
-# print(infos)
