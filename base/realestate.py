@@ -207,3 +207,7 @@ class RealEstate(object):
     @staticmethod
     def microseconds():
         return int(time.time() * 1000000)
+
+    @staticmethod
+    def format_tag(tag):
+        return tag.text.strip().replace('\n', '').replace(' ', '')
