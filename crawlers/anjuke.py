@@ -30,18 +30,18 @@ class anjuke(RealEstate):
     rental_url = 'https://%s.zu.anjuke.com/'
 
     # 新房信息
-    def get_new_hourse_infos(self, city):
+    def fetch_new_hourse_links(self, city):
         url = self.new_house_url % city
         wb_data = self.fetch(url)
         soup = BeautifulSoup(wb_data, 'lxml')
         items = soup.select('div.key-list > div.item-mod')
-        infos = []
+        links = []
         for i in items:
             link = i.get('data-link')
-            infos.append(self.get_new_house_info(link))
-        return infos
+            links.append(link)
+        return links
 
-    def get_new_house_info(self, link):
+    def analysis_new_house_page(self, link):
         try:
             wb_data = self.fetch(link)
             soup = BeautifulSoup(wb_data, 'lxml')
@@ -80,18 +80,18 @@ class anjuke(RealEstate):
             print('数据抓取失败：%s, url:%s' % (str(e), link))
 
     # 二手房信息
-    def get_second_hand_infos(self, city):
+    def fetch_second_hand_links(self, city):
         url = self.second_hand_url % city
         wb_data = self.fetch(url)
         soup = BeautifulSoup(wb_data, 'lxml')
         items = soup.select('div.house-title > a')
-        infos = []
+        links = []
         for i in items:
             link = i.get('href')
-            infos.append(self.get_second_hand_info(link))
-        return infos
+            links.append(link)
+        return links
 
-    def get_second_hand_info(self, link):
+    def analysis_second_hand_page(self, link):
         try:
             wb_data = self.fetch(link)
             soup = BeautifulSoup(wb_data, 'lxml')
@@ -138,18 +138,18 @@ class anjuke(RealEstate):
             print('数据抓取失败：%s, url:%s' % (str(e), link))
 
     # 租房信息
-    def get_rental_infos(self, city):
+    def fetch_rental_links(self, city):
         url = self.rental_url % city
         wb_data = self.fetch(url)
         soup = BeautifulSoup(wb_data, 'lxml')
         items = soup.select('div.zu-itemmod')
-        infos = []
+        links = []
         for i in items:
             link = i.get('link')
-            infos.append(self.get_rental_info(link))
-        return infos
+            links.append(link)
+        return links
 
-    def get_rental_info(self, link):
+    def analysis_rental_page(self, link):
         try:
             wb_data = self.fetch(link)
             soup = BeautifulSoup(wb_data, 'lxml')

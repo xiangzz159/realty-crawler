@@ -34,23 +34,22 @@ class tongcheng58(RealEstate):
         pass
 
     # 租房信息
-    def get_rental_infos(self, city):
+    def fetch_rental_links(self, city):
         url = self.rental_url % (city)
         wb_datas = self.fetch(url)
         soup = BeautifulSoup(wb_datas, 'lxml')
         items = soup.select('ul.house-list > li > div.des > h2 > a')
-        infos = []
+        links = []
         for i in items:
             link = i.get('href')
             if 'e.58.com' in link:
                 continue
             if link[:2] == '//':
                 link = 'https:' + link
+            links.append(link)
+        return links
 
-            infos.append(self.get_rental_info(link))
-        return infos
-
-    def get_rental_info(self, link):
+    def analysis_rental_page(self, link):
         try:
             wb_data = self.fetch(link)
             bs64_str = re.findall("charset=utf-8;base64,(.*?)'\)", wb_data)[0]
@@ -65,19 +64,22 @@ class tongcheng58(RealEstate):
             deposit_way = pay_way[1].text.strip()
 
             base_desc = soup.select('ul.f14 > li > span')
-            lease_way = base_desc[1].text.strip()
-            house_type = base_desc[3].text.strip().replace('\n', '').replace(' ', '')
+            lease_way = self.format_tag(base_desc[1])
+            house_type = self.format_tag(base_desc[3])
+            house_type = house_type.replace('\xa0\xa0', ' ')
             house_type = self.show_real_numb(house_type, bs64_str)
-            toward = base_desc[5].text.strip().replace('\n', '').replace(' ', '')
+            toward = self.format_tag(base_desc[5])
+            toward = toward.replace('\xa0\xa0', ' ')
             toward = self.show_real_numb(toward, bs64_str)
-            address1 = base_desc[7].text.strip()
-            area = base_desc[9].text.strip().replace('\n', '').replace(' ', '')
-            address2 = base_desc[11].text.strip()
+            address1 = self.format_tag(base_desc[7])
+            area = self.format_tag(base_desc[9])
+            address2 = self.format_tag(base_desc[11])
             address = area + '_' + address2 + '_' + address1
+            address = address.replace('\xa0\xa0', ' ')
 
             introduce_item = soup.select('ul.introduce-item > li')
-            bright_spot = introduce_item[0].text.strip().replace('\n', '').replace(' ', '')
-            desc = introduce_item[1].text.strip().replace('\n', '').replace(' ', '')
+            bright_spot = self.format_tag(introduce_item[0])
+            desc = self.format_tag(introduce_item[1])
             return {
                 'title': title,
                 'price': price,
@@ -95,57 +97,62 @@ class tongcheng58(RealEstate):
             print('数据抓取失败：%s, url:%s' % (str(e), link))
 
     # 二手房信息
-    def get_second_hand_infos(self, city):
+    def fetch_second_hand_links(self, city):
         url = self.second_hand_url % city
         wb_datas = self.fetch(url)
         soup = BeautifulSoup(wb_datas, 'lxml')
-        links = soup.select('h2.title > a')
-        infos = []
-        for i in links:
+        items = soup.select('h2.title > a')
+        links = []
+        for i in items:
             link = i.get('href')
             if link[:2] == '//':
                 link = 'https:' + link
-            infos.append(self.get_info(link))
-        return infos
+            links.append(link)
+        return links
 
-    def get_second_hand_info(self, link):
+    def analysis_second_hand_page(self, link):
         try:
             wb_data = self.fetch(link)
             bs64_str = re.findall("charset=utf-8;base64,(.*?)'\)", wb_data)[0]
 
             soup = BeautifulSoup(wb_data, 'lxml')
-            title = soup.select('div.house-title > h1')[0].text.strip()
+            title = self.format_tag(soup.select('div.house-title > h1')[0])
             basic_item1 = soup.select('p.house-basic-item1 > span')
             total_price = self.show_real_numb(basic_item1[0].text.strip(), bs64_str)
             price_per = self.show_real_numb(basic_item1[1].text.strip(), bs64_str)
             price_per = price_per.replace('\xa0', ' ')
 
             basic_item2 = soup.select('div.house-basic-item2 > p > span')
-            room_main = basic_item2[0].text.strip()
-            room_sub = basic_item2[1].text.strip()
-            area_main = basic_item2[2].text.strip()
-            area_sub = basic_item2[3].text.strip()
-            toward_main = basic_item2[4].text.strip()
-            toward_sub = basic_item2[5].text.strip()
-            toward_sub = toward_sub.replace('\n', '')
-            toward_sub = toward_sub.replace(' ', '')
+            door_model = self.format_tag(basic_item2[0])
+            floor = self.format_tag(basic_item2[1])
+            area = self.format_tag(basic_item2[2])
+            fitment = self.format_tag(basic_item2[3])
+            toward = self.format_tag(basic_item2[4])
+            build_time = self.format_tag(basic_item2[5])
+
             basic_item3 = soup.select('ul.house-basic-item3 > li > span')
-            house_basic1 = basic_item3[1].text.strip().replace('\n', '').replace(' ', '')
-            house_basic2 = basic_item3[3].text.strip().replace('\n', '').replace(' ', '')
+            community = self.format_tag(basic_item3[1])
+            address = self.format_tag(basic_item3[3])
+
+            general_item = soup.select('ul.general-item-right > li > span')
+            equity_year = self.format_tag(general_item[5])
 
             return {
-                'title': title,
-                'total_price': total_price,
-                'price_per': price_per,
-                'room_main': room_main,
-                'room_sub': room_sub,
-                'area_main': area_main,
-                'area_sub': area_sub,
-                'toward_main': toward_main,
-                'toward_sub': toward_sub,
-                'house_basic1': house_basic1,
-                'house_basic2:': house_basic2,
-                'link': link
+                'title': title,  # 标题
+                'total_price': total_price,  # 总价
+                'price_per': price_per,  # 房屋单价
+                'community': community,  # 所属小区
+                'door_model': door_model,  # 户型
+                'address': address,  # 地址
+                'area': area,  # 建筑面积
+                'build_time': build_time,  # 建造年代
+                'toward': toward,  # 朝向
+                'house_type': '普通住宅',  # 房屋类型
+                'floor': floor,  # 所在楼层
+                'fitment': fitment,  # 装修程度
+                'equity_year': equity_year,  # 产权年限
+                'equity_type': '商品房',  # 产权性质
+                'link': link  # 链接地址
             }
 
         except Exception as e:
@@ -167,4 +174,3 @@ class tongcheng58(RealEstate):
         for num in ret_list:
             ret_str_show += str(num)
         return ret_str_show
-
