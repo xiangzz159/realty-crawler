@@ -62,11 +62,18 @@ class RealEstate(object):
     last_response_headers = None
     parseJsonResponse = False
 
-    def __init__(self):
+    def __init__(self, config={}):
         self.userAgent = default_user_agent()
         self.session = self.session if self.session else Session()
         self.logger = self.logger if self.logger else logging.getLogger(__name__)
         self.headers = {} if self.headers is None else self.headers
+        settings = self.deep_extend(self.describe(), config)
+        for key in settings:
+            if hasattr(self, key) and isinstance(getattr(self, key), dict):
+                setattr(self, key, self.deep_extend(getattr(self, key), settings[key]))
+            else:
+                setattr(self, key, settings[key])
+
 
     def __del__(self):
         if self.session:
@@ -211,3 +218,19 @@ class RealEstate(object):
     @staticmethod
     def format_tag(tag):
         return tag.text.strip().replace('\n', '').replace(' ', '')
+
+    @staticmethod
+    def deep_extend(*args):
+        result = None
+        for arg in args:
+            if isinstance(arg, dict):
+                if not isinstance(result, dict):
+                    result = {}
+                for key in arg:
+                    result[key] = RealEstate.deep_extend(result[key] if key in result else None, arg[key])
+            else:
+                result = arg
+        return result
+
+    def describe(self):
+        return {}

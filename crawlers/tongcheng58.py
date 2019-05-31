@@ -15,8 +15,6 @@
 
 from base.realestate import RealEstate
 from bs4 import BeautifulSoup
-import requests
-import config
 from fontTools.ttLib import TTFont
 from io import BytesIO
 import base64
@@ -24,18 +22,40 @@ import re
 
 
 class tongcheng58(RealEstate):
-    new_house_url = ''
-    second_hand_url = 'https://%s.58.com/ershoufang/'
-    rental_url = 'https://%s.58.com/chuzu/'
+    def describe(self):
+        return self.deep_extend(super(tongcheng58, self).describe(), {
+            'id': 'tongcheng58',
+            'name': '58同城',
+            'spelling': False,  # True为全拼，False为缩写
+            'has': {
+                'fetchNewHouse': False,
+                'fetchSecondHandHouse': True,
+                'fetchRentalLinks': True
+            },
+            'urls': {
+                'new_house_url': '',
+                'second_hand_url': 'https://%s.58.com/ershoufang/',
+                'rental_url': 'https://%s.58.com/chuzu/'
+            }
+        })
 
     # 新房信息
-    def get_new_hourse_infos(self, city):
+    def fetch_new_hourse_links(self, city):
+        if self.has['fetchNewHouse'] == False:
+            return None
         # 安居客
+        pass
+
+    def analysis_new_house_page(self, link):
+        if self.has['fetchNewHouse'] == False:
+            return None
         pass
 
     # 租房信息
     def fetch_rental_links(self, city):
-        url = self.rental_url % (city)
+        if self.has['fetchRentalLinks'] == False:
+            return None
+        url = self.urls['rental_url'] % city
         wb_datas = self.fetch(url)
         soup = BeautifulSoup(wb_datas, 'lxml')
         items = soup.select('ul.house-list > li > div.des > h2 > a')
@@ -50,6 +70,8 @@ class tongcheng58(RealEstate):
         return links
 
     def analysis_rental_page(self, link):
+        if self.has['fetchRentalLinks'] == False:
+            return None
         try:
             wb_data = self.fetch(link)
             bs64_str = re.findall("charset=utf-8;base64,(.*?)'\)", wb_data)[0]
@@ -77,19 +99,24 @@ class tongcheng58(RealEstate):
             address = area + '_' + address2 + '_' + address1
             address = address.replace('\xa0\xa0', ' ')
 
+            district_list_items = soup.select('ul.district-info-list > li > span')
+            build_time = self.format_tag(district_list_items[1])
+            floor = self.format_tag(district_list_items[2])
+
             introduce_item = soup.select('ul.introduce-item > li')
-            bright_spot = self.format_tag(introduce_item[0])
             desc = self.format_tag(introduce_item[1])
             return {
                 'title': title,
-                'price': price,
-                'deposit_way': deposit_way,
-                'lease_way': lease_way,
-                'house_type': house_type,
-                'toward': toward,
-                'address': address,
-                'bright_spot': bright_spot,
-                'desc': desc,
+                'price': price,  # 月租
+                'deposit_way': deposit_way,  # 押金方式：押二付一
+                'lease_way': lease_way,  # 租借方式：整租/合租
+                'house_type': house_type.split(' ')[0],  # 房屋类型
+                'toward': toward,  # 朝向
+                'address': address,  # 地址
+                'area': house_type.split(' ')[1],
+                'floor': floor,
+                'build_time': build_time,
+                'desc': desc,  # 描述
                 'link': link
             }
 
@@ -98,7 +125,9 @@ class tongcheng58(RealEstate):
 
     # 二手房信息
     def fetch_second_hand_links(self, city):
-        url = self.second_hand_url % city
+        if self.has['fetchSecondHandHouse'] == False:
+            return None
+        url = self.urls['second_hand_url'] % city
         wb_datas = self.fetch(url)
         soup = BeautifulSoup(wb_datas, 'lxml')
         items = soup.select('h2.title > a')
@@ -111,6 +140,8 @@ class tongcheng58(RealEstate):
         return links
 
     def analysis_second_hand_page(self, link):
+        if self.has['fetchSecondHandHouse'] == False:
+            return None
         try:
             wb_data = self.fetch(link)
             bs64_str = re.findall("charset=utf-8;base64,(.*?)'\)", wb_data)[0]
